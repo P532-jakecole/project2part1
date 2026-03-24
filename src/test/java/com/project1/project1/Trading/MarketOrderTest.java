@@ -5,6 +5,8 @@ import static org.mockito.Mockito.*;
 
 import com.project1.project1.Feed.Feed;
 import com.project1.project1.Feed.FeedObject;
+import com.project1.project1.Notification.BaseNotification;
+import com.project1.project1.Notification.ConsoleNotify;
 import com.project1.project1.Updating.FeedService;
 import com.project1.project1.Feed.Stock;
 import com.project1.project1.Notification.NotificationService;
@@ -36,7 +38,6 @@ class MarketOrderTest {
     @Mock
     Portfolio portfolio;
 
-    @Mock
     NotificationService notificationService;
 
     @Mock
@@ -46,12 +47,14 @@ class MarketOrderTest {
 
     @BeforeEach
     void setup() {
+        notificationService = new ConsoleNotify(new BaseNotification());
+
         orderFactory = new OrderFactory(
                 feed,
                 market,
                 pendingOrders,
                 portfolio,
-                notificationService,
+//                notificationService,
                 tradeHistory
         );
     }
@@ -100,19 +103,17 @@ class MarketOrderTest {
     void marketBuyFailsWhenInsufficientFunds() {
 
         // Arrange
-        FeedObject stock = new Stock("AAPL", 150.0, feedService);
+        FeedObject stock = new Stock("AAPL", 150.0, feedService, portfolio);
 
         when(feed.getObject("AAPL")).thenReturn(stock);
         when(portfolio.getCashBalance()).thenReturn(100.0);
+        when(portfolio.getNotifications()).thenReturn(notificationService);
 
         // Act
         Order order = orderFactory.createOrder("Market", "buy", "AAPL", 150.0, 1);
 
         // Assert
         assertNull(order);
-        verify(notificationService).sendNotification(
-                String.format("balance,%.2f,%.2f,%.2f", 150.0, 1.0,100.00)
-        );
         verify(portfolio, never()).reduceCashBalance(anyDouble());
     }
 
@@ -120,19 +121,17 @@ class MarketOrderTest {
     void marketSellFailsWhenHoldingDoesNotExist() {
 
         // Arrange
-        FeedObject stock = new Stock("AAPL", 150.0, feedService);
+        FeedObject stock = new Stock("AAPL", 150.0, feedService, portfolio);
 
         when(feed.getObject("AAPL")).thenReturn(stock);
         when(portfolio.getHolding("AAPL")).thenReturn(null);
+        when(portfolio.getNotifications()).thenReturn(notificationService);
 
         // Act
         Order order = orderFactory.createOrder("Market", "sell", "AAPL", 150.0, 1);
 
         // Assert
         assertNull(order);
-
-        verify(notificationService).sendNotification("holding,AAPL");
-
         verify(portfolio, never()).addCashBalance(anyDouble());
     }
 

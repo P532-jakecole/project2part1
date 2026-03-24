@@ -1,5 +1,6 @@
 package com.project1.project1.Controllers;
 
+import com.project1.project1.Notification.NotificationService;
 import com.project1.project1.Repository.OrderRepository;
 import com.project1.project1.Repository.PendingOrders;
 import com.project1.project1.Trading.Order;
@@ -60,6 +61,37 @@ public class OrderController {
     @GetMapping("/info")
     public String userInformation() {
         return portfolio.userInformation();
+    }
+
+    @PostMapping("/info")
+    public void setUser(@RequestBody Integer id) {
+        System.out.println("In Controller");
+        portfolio.setUser(id);
+    }
+
+    @PostMapping("/info/notification/add")
+    public void addNotification(@RequestBody String notification) {
+        portfolio.addNotification(notification);
+    }
+
+    @PostMapping("/info/notification/sub")
+    public void subNotification(@RequestBody String notification) {
+        portfolio.subNotification(notification);
+    }
+
+    @GetMapping("/info/notify")
+    public List<String> getNotifications() {
+        return portfolio.getNotificationList();
+    }
+
+    @PostMapping("/price")
+    public void setPriceAlgo(@RequestBody String algo) {
+        portfolio.setPricingModel(algo);
+    }
+
+    @GetMapping("/price")
+    public String getPriceAlgo() {
+        return portfolio.getCurrentPricingModel();
     }
 
 }

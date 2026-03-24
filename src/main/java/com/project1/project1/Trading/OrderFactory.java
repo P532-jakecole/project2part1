@@ -19,7 +19,7 @@ public class OrderFactory {
     private final Market market;
     private final PendingOrders pendingOrders;
     private final Portfolio portfolio;
-    private final NotificationService notificationService;
+    private NotificationService notificationService;
     private final TradeHistory tradeHistory;
 
     public OrderFactory(
@@ -27,18 +27,18 @@ public class OrderFactory {
             Market market,
             PendingOrders pendingOrders,
             Portfolio portfolio,
-            NotificationService notificationService,
+//            NotificationService notificationService,
             TradeHistory tradeHistory) {
 
         this.feed = feed;
         this.market = market;
         this.pendingOrders = pendingOrders;
         this.portfolio = portfolio;
-        this.notificationService = notificationService;
         this.tradeHistory = tradeHistory;
     }
 
     public Order createOrder(String type, String action, String name, double price, double quantity) {
+        this.notificationService = this.portfolio.getNotifications();
         if(feed.getObject(name) == null){
             notificationService.sendNotification(String.format("objectError,%s", name));
         }

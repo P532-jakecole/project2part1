@@ -4,6 +4,7 @@ import com.project1.project1.Pricing.Market;
 import com.project1.project1.Pricing.Observer;
 import com.project1.project1.Trading.Order;
 import com.project1.project1.Updating.OrderService;
+import com.project1.project1.User.Portfolio;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,14 +20,23 @@ import java.util.List;
 
 @Service
 public class PendingOrders {
-    @Autowired
+
     private Market market;
-    @Autowired
-    OrderService orderService;
+    private OrderService orderService;
+    private Portfolio portfolio;
 
     //private static final PendingOrders pending = new PendingOrders();
-    private static final String FILE_NAME = "data/Pending.txt";
+    private String FILE_NAME;
     private static final String NEW_LINE = System.lineSeparator();
+
+    @Autowired
+    public PendingOrders(Market market, OrderService orderService, Portfolio portfolio) {
+        this.market = market;
+        this.orderService = orderService;
+        this.portfolio = portfolio;
+
+        FILE_NAME  = String.format("data/%d/Pending.txt", this.portfolio.getUserId());
+    }
 
     //private PendingOrders() {}
 
@@ -42,8 +52,13 @@ public class PendingOrders {
                 StandardOpenOption.APPEND);
     }
 
+    private void updateDatabase(){
+        FILE_NAME = String.format("data/%d/Pending.txt", this.portfolio.getUserId());
+    }
+
     public void save(Order order) {
         try {
+            updateDatabase();
             Path path = Paths.get(FILE_NAME);
             String data = order.getOrder() + NEW_LINE;
             appendToFile(path, data);
@@ -55,11 +70,15 @@ public class PendingOrders {
 
     public List<String> getAll() {
         ArrayList<String> orders = new ArrayList<>();
+        updateDatabase();
         try{
             Path path = Paths.get(FILE_NAME);
+            System.out.println(path);
             if(Files.exists(path)){
                 List<String> orderList = Files.readAllLines(path, StandardCharsets.UTF_8);
                 orders.addAll(orderList);
+            }else{
+                System.out.println("File not found");
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -70,18 +89,23 @@ public class PendingOrders {
     public void removeOrder(Order order) {
 
         try{
+            updateDatabase();
             Path path = Paths.get(FILE_NAME);
             if(Files.exists(path)){
                 List<String> orderList = Files.readAllLines(path, StandardCharsets.UTF_8);
                 Iterator<String> orders = orderList.iterator();
 
                 String[] orderDetail = order.getOrder().split(",");
-                String time = orderDetail[orderDetail.length - 1];
+                String time = orderDetail[orderDetail.length - 2];
+
+                System.out.println(time);
+
 
                 while(orders.hasNext()){
                     String data = orders.next();
                     String[] values = data.split(",");
-                    if(values[values.length-1].equals(time)){
+                    System.out.println(values[values.length-2]);
+                    if(values[values.length-2].equals(time)){
                         orders.remove();
                     }
                 }

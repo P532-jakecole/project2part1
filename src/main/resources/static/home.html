@@ -11,6 +11,12 @@
 <body>
 <script>
     let host = "";
+    let badge = new Map();
+    badge.set('1', '0');
+    badge.set('2', '0');
+    badge.set('3', '0');
+    let dashboardShown = false;
+
     // Loads any existing History data
     async function loadHistory() {
         let response = await fetch(host + "/home");
@@ -92,10 +98,41 @@
         document.getElementById("totalValue").textContent = balances[1];
     }
 
+    async function loadNotifications(userId) {
+        try {
+            let response = await fetch(host + "/home/info/notify");
+            let notifications = await response.json();
+
+            let badge2 = document.getElementById("badge");
+            badge2.innerText = "Badge Number: " + badge.get(userId);
+
+            dashboardShown = notifications.includes("dashboard");
+            if (dashboardShown){
+                document.getElementById("badge").style.display = "inline";
+            }else{
+                document.getElementById("badge").style.display = "none";
+            }
+
+            document.querySelectorAll("input[type=checkbox]").forEach(box => box.checked = false);
+
+            notifications.forEach(noti => {
+                let checkbox = document.getElementById(noti.toLowerCase());
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+
+
+        } catch (error) {
+            console.error("Error loading notifications:", error);
+        }
+    }
+
     loadHistory();
     loadPending();
     loadHoldings();
-    loadBalances()
+    loadBalances();
+    loadNotifications("1");
 </script>
 
 <script>
@@ -118,6 +155,7 @@
             subscribePendingSub();
             subscribeHoldingSub();
             subscribeBalance();
+            subscribeNotify();
         });
     }
 
@@ -129,6 +167,19 @@
                 const price = feedDiv.querySelector(".price");
                 price.innerText = feedObject.price.toFixed(2);
             }
+        });
+    }
+
+    function subscribeNotify(){
+        stompClient.subscribe("/info/notify", function(message){
+            let text = message.body;
+            const userCounter = text.split(",");
+            badge.set(userCounter[0], userCounter[1])
+
+            let badge2 = document.getElementById("badge");
+
+            badge2.style.display = "inline";
+            badge2.innerText = "Badge Number: " + userCounter[1];
         });
     }
 
@@ -302,6 +353,30 @@
 
     connect();
 </script>
+
+<div style = "
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 14px;
+
+    display: none;
+    z-index: 1000;"
+     id="badge">Badge Number: 0</div>
+
+<br><br>
+<label for="user">Select User:</label>
+<select id="user">
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="3">3</option>
+</select>
+<br><br>
+<button onclick="setUser()">Set User</button>
+
+<br><br><br><br>
+
 <h4>Cash Balance: <span id="cashBalance"></span></h4>
 <h4>Total Value: <span id="totalValue"></span></h4>
 <br>
@@ -347,6 +422,16 @@
 
 </div>
 
+<h2>Market Pricing</h2>
+<label for="pricing">Select Price Strategy:</label>
+<select id="pricing">
+    <option value=randomWalk>Random Walk</option>
+    <option value= trendFollowing >Trend Following</option>
+    <option value=meanReversion>Mean Reversion</option>
+</select>
+<br>
+<button onclick="setPricing()">Set Market Pricing</button>
+
 <h2>Pending Orders</h2>
 <table id="pendingTable">
     <thead>
@@ -362,6 +447,7 @@
     <tbody></tbody>
 </table>
 
+<br><br>
 
 <!--Buy Stock Input-->
 <label>Ticker:</label>
@@ -389,6 +475,17 @@
 <button onclick="sellOrder()">Sell Order</button>
 <br>
 
+<h3>Select Notifications</h3>
+
+<label><input type="checkbox" id = "console" value="console" onchange="handleNotification(this)"> Console</label>
+<br>
+<label><input type="checkbox" id = "email" value="email" onchange="handleNotification(this)"> Email</label>
+<br>
+<label><input type="checkbox" id = "sms" value="sms" onchange="handleNotification(this)"> SMS</label>
+<br>
+<label><input type="checkbox" id = "dashboard" value="dashboard" onchange="handleNotification(this)"> Dashboard</label>
+<br>
+
 <h2> Transaction History</h2>
 <table id="historyTable">
     <thead>
@@ -406,6 +503,103 @@
 
 <script>
     //let host = "https://duck-service-jakecole.onrender.com";
+
+    async function setUser(){
+        let userId = parseInt(document.getElementById("user").value);
+
+        let request = {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(userId)
+        };
+
+        let response = await fetch(host + "/home/info", request);
+
+        let message;
+
+        if (response.ok) {
+            message = "User was successfully set";
+        } else {
+            console.log(response);
+            message = "Error: User couldn't be set";
+        }
+
+        alert(message);
+        await loadHistory();
+        await loadPending();
+        await loadHoldings();
+        await loadBalances();
+        await loadNotifications(userId.toString());
+    }
+
+    async function handleNotification(checkbox) {
+
+        let type = checkbox.value;
+        let endpoint = "";
+        if (checkbox.checked){
+            endpoint = "/home/info/notification/add";
+            if(type === "dashboard"){
+                let badge = document.getElementById("badge");
+
+                badge.style.display = "inline";
+            }
+        }else{
+            endpoint = "/home/info/notification/sub";
+
+            let badge = document.getElementById("badge");
+
+            badge.style.display = "none";
+            badge.innerText = "Badge Number: 0";
+        }
+
+
+        let request = {
+            method: "POST",
+            headers: {
+                "Content-Type": "text/plain"
+            },
+            body: type
+        };
+
+        try {
+            let response = await fetch(host + endpoint, request);
+
+            if (response.ok) {
+                console.log(type + (checkbox.checked ? " added" : " removed"));
+            } else {
+                console.log("Error:", response);
+            }
+
+        } catch (error) {
+            console.error("Request failed:", error);
+        }
+    }
+
+    async function setPricing() {
+
+        let pricing = document.getElementById("pricing").value;
+
+        let request = {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: pricing
+        };
+
+        let response = await fetch(host + "/home/price", request);
+
+        let message;
+
+        if (response.ok) {
+            message = "Price Model was successfully set";
+        } else {
+            message = "Error: Price Model couldn't be set";
+        }
+        alert(message);
+    }
 
     async function buyOrder() {
         let message = "";
@@ -520,27 +714,5 @@
         alert(message);
     }
 </script>
-
-<!--<script>-->
-<!--    async function submitTheImage() {-->
-<!--        let duckId = document.getElementById("duckId").value;-->
-<!--        let imageInput = document.getElementById("duckImage");-->
-
-<!--        let formData = new FormData();-->
-<!--        formData.append("file", imageInput.files[0]);-->
-<!--        let token = localStorage.getItem("token");-->
-
-<!--        let request = {-->
-<!--            method: "POST",-->
-<!--            body: formData,-->
-<!--            headers: {"Authorization": `Bearer ${token}`}-->
-<!--        };-->
-
-<!--        let response = await fetch(host + "/ducks/" + duckId + "/image", request);-->
-<!--        let result = await response.json();-->
-
-<!--        return result;-->
-<!--    }-->
-<!--</script>-->
 </body>
 </html>

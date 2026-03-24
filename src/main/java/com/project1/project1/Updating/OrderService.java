@@ -65,4 +65,11 @@ public class OrderService {
                 balances
         );
     }
+
+    public void sendNotification(String message) {
+        messagingTemplate.convertAndSend(
+                "/info/notify",
+                message
+        );
+    }
 }

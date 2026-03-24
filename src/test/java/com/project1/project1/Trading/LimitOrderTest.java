@@ -4,6 +4,8 @@ import static org.mockito.Mockito.*;
 
 import com.project1.project1.Feed.Feed;
 import com.project1.project1.Feed.FeedObject;
+import com.project1.project1.Notification.BaseNotification;
+import com.project1.project1.Notification.ConsoleNotify;
 import com.project1.project1.Updating.FeedService;
 import com.project1.project1.Notification.NotificationService;
 import com.project1.project1.Pricing.Market;
@@ -35,22 +37,25 @@ class LimitOrderTest {
     @Mock
     Portfolio portfolio;
 
-    @Mock
-    NotificationService notificationService;
+//    @Mock
+//    NotificationService notificationService;
 
     @Mock
     TradeHistory tradeHistory;
 
     OrderFactory orderFactory;
+    NotificationService notificationService;
 
     @BeforeEach
     void setup() {
+        notificationService = new ConsoleNotify(new BaseNotification());
+
         orderFactory = new OrderFactory(
                 feed,
                 market,
                 pendingOrders,
                 portfolio,
-                notificationService,
+//                notificationService,
                 tradeHistory
         );
     }

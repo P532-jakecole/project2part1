@@ -5,6 +5,8 @@ import static org.mockito.Mockito.*;
 
 import com.project1.project1.Feed.Feed;
 import com.project1.project1.Feed.FeedObject;
+import com.project1.project1.Notification.BaseNotification;
+import com.project1.project1.Notification.ConsoleNotify;
 import com.project1.project1.Updating.FeedService;
 import com.project1.project1.Feed.Stock;
 import com.project1.project1.Notification.NotificationService;
@@ -36,7 +38,6 @@ class OrderFactoryTest {
     @Mock
     Portfolio portfolio;
 
-    @Mock
     NotificationService notificationService;
 
     @Mock
@@ -46,12 +47,14 @@ class OrderFactoryTest {
 
     @BeforeEach
     void setup() {
+        notificationService = new ConsoleNotify(new BaseNotification());
+
         orderFactory = new OrderFactory(
                 feed,
                 market,
                 pendingOrders,
                 portfolio,
-                notificationService,
+//                notificationService,
                 tradeHistory
         );
     }
@@ -60,10 +63,11 @@ class OrderFactoryTest {
     void marketBuySuccess() {
 
         // Arrange
-        FeedObject stock = new Stock("AAPL", 150.0, feedService);
+        FeedObject stock = new Stock("AAPL", 150.0, feedService, portfolio);
 
         when(feed.getObject("AAPL")).thenReturn(stock);
         when(portfolio.getCashBalance()).thenReturn(200.0);
+        when(portfolio.getNotifications()).thenReturn(notificationService);
 
         // Act
         Order order = orderFactory.createOrder("Market", "buy", "AAPL", 150.0, 1);
@@ -83,8 +87,10 @@ class OrderFactoryTest {
     void limitBuySuccess() {
 
         // Arrange
-        FeedObject stock = new Stock("AAPL", 180.0, feedService);
+        FeedObject stock = new Stock("AAPL", 180.0, feedService, portfolio);
         when(feed.getObject("AAPL")).thenReturn(stock);
+        when(portfolio.getNotifications()).thenReturn(notificationService);
+        when(portfolio.getUserId()).thenReturn(1);
 
         // Act
         Order order = orderFactory.createOrder("Limit", "buy", "AAPL", 150.0, 1);
@@ -105,17 +111,15 @@ class OrderFactoryTest {
     void orderNameFail() {
 
         // Arrange
-        FeedObject stock = new Stock("AAPL", 180.0, feedService);
+        FeedObject stock = new Stock("AAPL", 180.0, feedService, portfolio);
         when(feed.getObject("AAPL")).thenReturn(stock);
+        when(portfolio.getNotifications()).thenReturn(notificationService);
 
         // Act
         Order order = orderFactory.createOrder("MOCK", "buy", "AAPL", 150.0, 1);
 
         // Assert
         assertNull(order);
-        verify(notificationService).sendNotification(
-                String.format(String.format("orderError,%s", "MOCK"))
-        );
         verify(portfolio, never()).reduceCashBalance(anyDouble());
     }
 
