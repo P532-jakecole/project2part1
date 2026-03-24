@@ -20,7 +20,7 @@ public class Portfolio {
 
 
     //private static final Portfolio account = new Portfolio();
-    private Integer userId;
+    private Integer userId = 1;
     private PricingModel pricingModel = new RandomWalk(new Random());
     private double cashBalance = 10000;
     private final String NEW_LINE = System.lineSeparator();
@@ -35,7 +35,6 @@ public class Portfolio {
     public Portfolio(OrderService orderService) {
         this.orderService = orderService;
         baseNotification = new BaseNotification();
-        userId = 1;
 
         for(int i = 1; i < 4; i++){
             userBalance.put(i, 10000.00);
@@ -56,20 +55,16 @@ public class Portfolio {
                 StandardOpenOption.APPEND);
     }
 
-    public void setCashBalance(double balance) {
-        this.cashBalance = balance;
-    }
-
-    public double getCashBalance() {
-        return cashBalance;
+    public Double getCashBalance() {
+        return userBalance.get(userId);
     }
 
     public void reduceCashBalance(double amount) {
-        cashBalance -= amount;
+        userBalance.put(userId, userBalance.get(userId) - amount);
     }
 
     public void addCashBalance(double amount) {
-        cashBalance += amount;
+        userBalance.put(userId, userBalance.get(userId) + amount);
     }
 
     public void setUser(Integer userId) {
@@ -85,10 +80,6 @@ public class Portfolio {
     }
 
     public void setPricingModel(String pricingModel) {
-         //pm = null;
-        System.out.println(pricingModel.toLowerCase());
-        System.out.println(pricingModel.equalsIgnoreCase("trendfollowing"));
-        System.out.println(pricingModel.equalsIgnoreCase("\"trendfollowing\""));
         PricingModel pm = switch (pricingModel.toLowerCase().replaceAll("\"", "")) {
             case "meanreversion" -> new MeanReversion(new Random());
             case "trendfollowing" -> new TrendFollowing(new Random());
@@ -272,7 +263,6 @@ public class Portfolio {
 
             if(!found){
                 appendToFile(path, holding.toString());
-                updatePortfolioBalance();
                 orderService.updateBalance(userInformation());
                 orderService.addHolding(holding);
                 return;
@@ -283,7 +273,6 @@ public class Portfolio {
                 appendToFile(path, h.toString());
             }
 
-            updatePortfolioBalance();
             orderService.updateBalance(userInformation());
         } catch (IOException e) {
             e.printStackTrace();
@@ -322,7 +311,6 @@ public class Portfolio {
             }
             Files.write(path, updated);
 
-            portfolioBalance = updatePortfolioBalance();
             orderService.updateBalance(userInformation());
         } catch (IOException e) {
             e.printStackTrace();
@@ -334,10 +322,14 @@ public class Portfolio {
         for(Holding h : getAllHoldings()){
             sumHoldings += h.getValue();
         }
+        Double currentCashBalance = getCashBalance();
+        if(currentCashBalance != null){
+            return sumHoldings + currentCashBalance;
+        }
         return sumHoldings + cashBalance;
     }
 
     public String userInformation(){
-        return String.format("%.2f,%.2f", cashBalance, portfolioBalance);
+        return String.format("%.2f,%.2f", getCashBalance(), updatePortfolioBalance());
     }
 }
