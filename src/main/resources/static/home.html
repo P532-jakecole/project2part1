@@ -165,7 +165,11 @@
 <br><br>
 
 <label>Type:</label>
-<input id="type"/>
+<select id="type">
+    <option value="Lab">Lab</option>
+    <option value="Medication">Medication</option>
+    <option value="Imaging">Imaging</option>
+</select>
 <label>Patient:</label>
 <input id="patient"/>
 <label>Clinician:</label>
@@ -173,7 +177,11 @@
 <label>Description:</label>
 <input id="description"/>
 <label>Priority:</label>
-<input id="priority"/>
+<select id="priority">
+    <option value="STAT">Stat</option>
+    <option value="URGENT">Urgent</option>
+    <option value="ROUTINE">Routine</option>
+</select>
 
 <button onclick="submitOrder()">Submit Order</button>
 <br>
