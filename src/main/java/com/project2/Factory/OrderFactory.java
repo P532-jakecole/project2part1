@@ -14,7 +14,6 @@ public class OrderFactory {
     private final OrderAccess orderAccess;
     private final TriagingEngine triagingEngine;
     private final CommandLog commandLog;
-    private int orderId = 1;
 
     public OrderFactory(OrderAccess orderAccess, NotificationService notificationService, TriagingEngine triagingEngine, CommandLog commandLog) {
         this.orderAccess = orderAccess;
@@ -23,7 +22,7 @@ public class OrderFactory {
         this.commandLog = commandLog;
     }
 
-    public Order create(String[] order){
+    public Order create(String[] order, int orderId){
         String type = order[0];
         ArrayList<Command> commands = new ArrayList<>();
         switch (type.toLowerCase()){
@@ -37,7 +36,7 @@ public class OrderFactory {
                 commands.add(new LabOrderCancelCommand(lo, orderAccess, notificationService, commandLog));
                 commandLog.addCommands(orderId, commands);
 
-                orderId++;
+                orderAccess.incrimentOrderId();
                 return lo;
             case "medication":
                 MedicationOrder mo = new MedicationOrder(orderId, order[1], order[2], order[3], order[4]);
@@ -49,7 +48,7 @@ public class OrderFactory {
                 commands.add(new MedicationOrderCancelCommand(mo, orderAccess, notificationService, commandLog));
                 commandLog.addCommands(orderId, commands);
 
-                orderId++;
+                orderAccess.incrimentOrderId();
                 return mo;
             case "imaging":
                 ImagingOrder io = new ImagingOrder(orderId, order[1], order[2], order[3], order[4]);
@@ -60,7 +59,7 @@ public class OrderFactory {
                 commands.add(new ImagingOrderCancelCommand(io, orderAccess, notificationService, commandLog));
                 commandLog.addCommands(orderId, commands);
 
-                orderId++;
+                orderAccess.incrimentOrderId();
                 io.registerObserver(notificationService);
                 return io;
             default:

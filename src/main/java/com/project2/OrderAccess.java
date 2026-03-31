@@ -16,6 +16,7 @@ public class OrderAccess {
         this.notificationService = notificationService;
     }
 
+    int nextOrderID = 1;
     ArrayList<Order> pendingOrders = new ArrayList<>();
     HashMap<String, Order> progressOrders = new HashMap<>();
 
@@ -85,5 +86,13 @@ public class OrderAccess {
             }
         }
         return null;
+    }
+
+    public int getNextOrderID(){
+        return nextOrderID;
+    }
+
+    public void incrimentOrderId(){
+        nextOrderID++;
     }
 }

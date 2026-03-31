@@ -19,7 +19,7 @@ public class OrderLogging extends OrderHandler{
 
     @Override
     public String process(Order order) {
-        notificationService.notify(order, commandType);
+        //notificationService.notify(order, commandType);
         commandLog.addLog(order, actor, commandType);
         super.process(order);
         return null;

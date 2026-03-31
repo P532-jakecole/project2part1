@@ -20,29 +20,39 @@ public class ConsoleNotification implements NotificationService{
     @Override
     public void notify(Order order, String event) {
         String message = null;
+        System.out.println("Notification Input");
+        System.out.println(event);
         switch (event.toLowerCase()) {
-            case "submit":
-                //TODO: Change message
-                message = "Order Submitted";
+//            case "submit":
+//                message = String.format("Order %d Successfully Submitted by %s\n", order.getOrderID(), order.getClinicianName());
+//                break;
+//            case "claim":
+//                message = String.format("Order %d Successfully Claimed\n", order.getOrderID());
+//                break;
+//            case "complete":
+//                message = String.format("Order %d Successfully Completed\n", order.getOrderID());
+//                break;
+//            case "cancel":
+//                message = String.format("Order %d Successfully Cancelled\n", order.getOrderID());
+//                break;
+            case "pending":
+                message = String.format("Order %d Successfully Submitted by %s\n", order.getOrderID(), order.getClinicianName());
                 break;
-            case "claim":
-                //TODO: Change message
-                message = "Order Claimed";
+            case "in_progress":
+                message = String.format("Order %d Successfully Claimed\n", order.getOrderID());
                 break;
-            case "complete":
-                //TODO: Change message
-                message = "Order Complete";
+            case "completed":
+                message = String.format("Order %d Successfully Completed\n", order.getOrderID());
                 break;
-            case "cancel":
-                //TODO: Change message
-                message = "Order Cancelled";
+            case "cancelled":
+                message = String.format("Order %d Successfully Cancelled\n", order.getOrderID());
                 break;
             case "cancel error":
-                //TODO: Change message
-                message = "Error cancelling order";
+                message = String.format("Error cancelling order %d. Status of order is %s\n", order.getOrderID(), order.getStatus());
                 break;
         }
         if (message != null) {
+            System.out.println("Message Sent");
             messagingTemplate.convertAndSend("/order/logs",
                     message);
         }

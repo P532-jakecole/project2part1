@@ -7,6 +7,32 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+    <style>
+        table {
+            width: 60%;
+            margin: 40px auto;
+            border-collapse: collapse;
+            font-family: Arial, sans-serif;
+        }
+
+        th {
+            background-color: #4a90d9;
+            color: white;
+            padding: 12px 16px;
+            text-align: center;
+            border: 1px solid #ccc;
+        }
+
+        td {
+            padding: 10px 16px;
+            text-align: center;
+        }
+
+        tr {
+            border: 1px solid grey;
+        }
+    </style>
 </head>
 <body>
 <script>
@@ -56,7 +82,6 @@
         tableBody.innerHTML = "";
 
         data.forEach(order => {
-            console.log(order);
             const row = document.createElement("tr");
             row.innerHTML = `
             <td>${order[0]}</td>
@@ -80,10 +105,9 @@
     function connect() {
         const socket = new SockJS('/ws');
         stompClient = Stomp.over(socket);
-        console.log("HERE");
 
         stompClient.connect({}, function(frame) {
-            console.log("Connected HERE: " + frame);
+            console.log("Connected: " + frame);
             subscribeNotify();
             loadTimer();
         });
@@ -91,7 +115,6 @@
 
     function subscribeNotify(){
         stompClient.subscribe("/order/logs", function(message){
-            console.log("Received a Log");
             let text = message.body;
             console.log(text);
         });
@@ -105,18 +128,6 @@
     connect();
 </script>
 
-
-
-<!--<br><br>-->
-<!--<label for="employee">Select Employee:</label>-->
-<!--<select id="employee">-->
-<!--    <option value="1">1</option>-->
-<!--    <option value="2">2</option>-->
-<!--    <option value="3">3</option>-->
-<!--</select>-->
-<!--<br><br>-->
-<!--<button onclick="setEmployee()">Set Employee</button>-->
-
 <br><br>
 <label for="department">Select Department:</label>
 <select id="department">
@@ -129,7 +140,7 @@
 
 <br><br><br><br>
 
-<h2> Order Queue</h2>
+<h2 style="text-align: center;"> Order Queue</h2>
 <table id="queueTable">
     <thead>
     <tr>
@@ -167,7 +178,7 @@
 <button onclick="submitOrder()">Submit Order</button>
 <br>
 
-<h2> Audit Log</h2>
+<h2 style="text-align: center;"> Audit Log</h2>
 <table id="logTable">
     <thead>
     <tr>
@@ -185,34 +196,21 @@
     async function setDepartment(){
         department = document.getElementById("department").value;
         console.log("Department Changed");
-
-        // let request = {
-        //     method: "POST",
-        //     headers: {
-        //         "Content-Type": "application/json",
-        //     },
-        //     body: JSON.stringify(userId)
-        // };
-        //
-        // let response = await fetch(host + "/home/info", request);
-
-        // let message;
-        //
-        // if (response.ok) {
-        //     message = "User was successfully set";
-        // } else {
-        //     console.log(response);
-        //     message = "Error: User couldn't be set";
-        // }
-        //
-        // alert(message);
-        // await loadHistory();
     }
 
     async function claimOrder(){
+        if(claimed.get(department) != null){
+            console.log("Already claimed an order");
+            return;
+        }
         let response = await fetch(host + "/home/order");
-        let data = await response.json();
-        console.log(data);
+        let data;
+        try{
+            data = await response.json();
+        }catch(e){
+            return;
+        }
+
         let orderId = data.orderID;
         claimed.set(department, orderId);
 
@@ -230,6 +228,10 @@
 
     async function completeOrder(){
         let orderId = claimed.get(department);
+        if(orderId == null){
+            console.log("No Order Claimed");
+            return;
+        }
 
         let order = [orderId, department]
 
@@ -291,9 +293,6 @@
 
         let order = [type, patient, clinician, description, priority];
 
-        console.log("You entered:" + JSON.stringify(order));
-        // let token = localStorage.getItem("token");
-
         let request = {
             method: "POST",
             headers: {
@@ -304,16 +303,6 @@
         };
         // let response =
         await fetch(host + "/home", request);
-
-        // if (response.ok) {
-        //
-        //     message = "Order was successfully created";
-        //
-        // } else {
-        //     console.log(response);
-        //     message = "Error: Order couldn't be filled";
-        // }
-        // alert(message);
     }
 </script>
 </body>

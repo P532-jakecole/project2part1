@@ -18,7 +18,7 @@ public class ImagingOrderCancelCommand implements Command {
     }
     @Override
     public void execute(String actor) {
-        String commandType = "claim";
+        String commandType = "cancel";
         OrderProcess orderProcess = new OrderValidation(new OrderLogging(new BaseOrderHandler(), notificationService, commandLog, actor, commandType), notificationService, commandType);
         String errorMessage = orderProcess.process(order);
         if(errorMessage == null) {

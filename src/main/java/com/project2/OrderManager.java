@@ -31,7 +31,8 @@ public class OrderManager{
 
     public void createOrder(String[] order) {
         String actor = order[2];
-        Order newOrder = orderFactory.create(order);
+        int orderId = orderAccess.getNextOrderID();
+        Order newOrder = orderFactory.create(order, orderId);
         Command create = commandLog.getSubmitCommand(newOrder.getOrderID());
         create.execute(actor);
     }

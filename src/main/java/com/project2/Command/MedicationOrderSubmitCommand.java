@@ -30,6 +30,7 @@ public class MedicationOrderSubmitCommand implements Command {
         OrderProcess orderProcess = new OrderValidation(new OrderLogging(new BaseOrderHandler(), notificationService, commandLog, actor, commandType), notificationService, commandType);
         String errorMessage = orderProcess.process(order);
         if(errorMessage == null){
+            order.setStatus("PENDING");
             int position = triagingEngine.getPosition(order.getPriority(), order.getTimestamp());
             orderAccess.saveOrder(position, order);
         }
