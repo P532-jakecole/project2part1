@@ -38,7 +38,7 @@ jobs:
 
       - run: mvn -q package -DskipTests
 
-      - run: docker build -t project1 .
+      - run: docker build -t project2 .
 
   deploy:
     needs: build

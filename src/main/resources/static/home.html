@@ -11,56 +11,58 @@
 <body>
 <script>
     let host = "";
-    let badge = new Map();
-    badge.set('1', '0');
-    badge.set('2', '0');
-    badge.set('3', '0');
-    let dashboardShown = false;
+    let department = "lab";
+    // let employee = "1";
+    let queue = new Map();
+    let claimed = new Map();
+    claimed.set("lab", null);
+    claimed.set("medication", null);
+    claimed.set("imaging", null);
 
     // Loads any existing History data
-    async function loadHistory() {
+    async function loadQueue() {
         let response = await fetch(host + "/home");
         let data = await response.json();
 
-        const tableBody = document.querySelector("#historyTable tbody");
+        const tableBody = document.querySelector("#queueTable tbody");
 
         tableBody.innerHTML = "";
 
         data.forEach(order => {
-            const parts = order.split(",");
             const row = document.createElement("tr");
+            let orderId = order.orderID;
             row.innerHTML = `
-            <td>${parts[5]}</td>
-            <td>${parts[1]}</td>
-            <td>${parts[2]}</td>
-            <td>${parts[4]}</td>
-            <td>${parts[3]}</td>
-            <td>${parts[6]}</td>
+            <td>${order.type}</td>
+            <td>${order.patientName}</td>
+            <td>${order.clinicianName}</td>
+            <td>${order.priority}</td>
+            <td>${order.status}</td>
+            <td> <button onclick="cancel(${orderId})">Cancel</button> </td>
         `;
 
             tableBody.appendChild(row);
+
+            queue.set(order.orderID, order);
         });
 
     }
 
-    async function loadPending() {
-        let response = await fetch(host + "/home/pending");
+    async function loadLog() {
+        let response = await fetch(host + "/home/log");
         let data = await response.json();
 
-        const tableBody = document.querySelector("#pendingTable tbody");
+        const tableBody = document.querySelector("#logTable tbody");
 
         tableBody.innerHTML = "";
 
         data.forEach(order => {
-            const parts = order.split(",");
+            console.log(order);
             const row = document.createElement("tr");
             row.innerHTML = `
-            <td>${parts[5]}</td>
-            <td>${parts[1]}</td>
-            <td>${parts[2]}</td>
-            <td>${parts[4]}</td>
-            <td>${parts[3]}</td>
-            <td>${parts[6]}</td>
+            <td>${order[0]}</td>
+            <td>${order[1]}</td>
+            <td>${order[2]}</td>
+            <td>${order[3]}</td>
         `;
 
             tableBody.appendChild(row);
@@ -68,71 +70,8 @@
 
     }
 
-    async function loadHoldings() {
-        let response = await fetch(host + "/home/holding");
-        let data = await response.json();
-
-        const tableBody = document.querySelector("#holdingTable tbody");
-
-        tableBody.innerHTML = "";
-
-        data.forEach(parts => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-            <td>${parts.name}</td>
-            <td>${parts.quantity}</td>
-            <td>${parts.price}</td>
-            <td>${parts.value}</td>
-        `;
-
-            tableBody.appendChild(row);
-        });
-
-    }
-
-    async function loadBalances(){
-        let response = await fetch(host + "/home/info");
-        let text = await response.text();
-        let balances = text.split(",");
-        document.getElementById("cashBalance").textContent = balances[0];
-        document.getElementById("totalValue").textContent = balances[1];
-    }
-
-    async function loadNotifications(userId) {
-        try {
-            let response = await fetch(host + "/home/info/notify");
-            let notifications = await response.json();
-
-            let badge2 = document.getElementById("badge");
-            badge2.innerText = "Badge Number: " + badge.get(userId);
-
-            dashboardShown = notifications.includes("dashboard");
-            if (dashboardShown){
-                document.getElementById("badge").style.display = "inline";
-            }else{
-                document.getElementById("badge").style.display = "none";
-            }
-
-            document.querySelectorAll("input[type=checkbox]").forEach(box => box.checked = false);
-
-            notifications.forEach(noti => {
-                let checkbox = document.getElementById(noti.toLowerCase());
-                if (checkbox) {
-                    checkbox.checked = true;
-                }
-            });
-
-
-        } catch (error) {
-            console.error("Error loading notifications:", error);
-        }
-    }
-
-    loadHistory();
-    loadPending();
-    loadHoldings();
-    loadBalances();
-    loadNotifications("1");
+    loadQueue();
+    loadLog();
 </script>
 
 <script>
@@ -141,307 +80,64 @@
     function connect() {
         const socket = new SockJS('/ws');
         stompClient = Stomp.over(socket);
+        console.log("HERE");
 
         stompClient.connect({}, function(frame) {
-            console.log("Connected: " + frame);
-            subscribeFeedObject("AAPL");
-            subscribeFeedObject("TSLA");
-            subscribeFeedObject("GOOG");
-            subscribeFeedObject("AMZN");
-            subscribeFeedObject("MSFT");
-            subscribeHistory();
-            subscribePendingAdd();
-            subscribeHoldingAdd();
-            subscribePendingSub();
-            subscribeHoldingSub();
-            subscribeBalance();
+            console.log("Connected HERE: " + frame);
             subscribeNotify();
-        });
-    }
-
-    function subscribeFeedObject(symbol){
-        stompClient.subscribe("/feed/" + symbol, function(message){
-            const feedObject = JSON.parse(message.body);
-            const feedDiv = document.getElementById(feedObject.name);
-            if(feedDiv){
-                const price = feedDiv.querySelector(".price");
-                price.innerText = feedObject.price.toFixed(2);
-            }
+            loadTimer();
         });
     }
 
     function subscribeNotify(){
-        stompClient.subscribe("/info/notify", function(message){
+        stompClient.subscribe("/order/logs", function(message){
+            console.log("Received a Log");
             let text = message.body;
-            const userCounter = text.split(",");
-            badge.set(userCounter[0], userCounter[1])
-
-            let badge2 = document.getElementById("badge");
-
-            badge2.style.display = "inline";
-            badge2.innerText = "Badge Number: " + userCounter[1];
+            console.log(text);
         });
     }
 
-    function subscribeBalance(){
-        stompClient.subscribe("/info/balance", function(message){
-            console.log("Received Balance Update");
-            let text = message.body;
-            const balances = text.split(",");
-            document.getElementById("cashBalance").textContent = balances[0];
-            document.getElementById("totalValue").textContent = balances[1];
-        });
-    }
-
-    function subscribeHistory(){
-        stompClient.subscribe("/trade/history", function(message){
-            const tradeObject = JSON.parse(message.body);
-            addTrade(tradeObject);
-        });
-    }
-
-    function subscribePendingAdd(){
-        stompClient.subscribe("/trade/addPending", function(message){
-            console.log("Received Pending Add Update");
-            const tradeObject = JSON.parse(message.body);
-            addPending(tradeObject);
-        });
-    }
-
-    function subscribePendingSub(){
-        stompClient.subscribe("/trade/subPending", function(message){
-            console.log("Received Pending Sub Update");
-            const tradeObject = JSON.parse(message.body);
-            subPending(tradeObject);
-        });
-    }
-
-    function subscribeHoldingAdd(){
-        stompClient.subscribe("/trade/addHolding", function(message){
-            console.log("Received Holding Add Update");
-            const tradeObject = JSON.parse(message.body);
-            addHolding(tradeObject);
-        });
-    }
-
-    function subscribeHoldingSub(){
-        stompClient.subscribe("/trade/subHolding", function(message){
-            console.log("Received Holding Sub Update");
-            const tradeObject = JSON.parse(message.body);
-            subHolding(tradeObject);
-        });
-    }
-
-    function addHolding(object){
-        console.log(object);
-
-        const tableBody = document.querySelector("#holdingTable tbody");
-        const rows = tableBody.rows;
-
-
-        let find = false;
-
-        for(let i = 0; i < rows.length; i++){
-            let name = rows[i].cells[0].textContent;
-            if(name === object.name){
-                tableBody.rows[i].cells[1].textContent = object.quantity.toFixed(3);
-                tableBody.rows[i].cells[2].textContent = object.price.toFixed(3);
-                tableBody.rows[i].cells[3].textContent = object.value.toFixed(3);
-                find = true;
-            }
-        }
-        console.log(find);
-        if(!find){
-            const row = document.createElement("tr");
-
-            row.innerHTML = `
-            <td>${object.name}</td>
-            <td>${object.quantity}</td>
-            <td>${object.price}</td>
-            <td>${object.value}</td>
-        `;
-            tableBody.appendChild(row);
-        }
-
-
-
-
-    }
-
-    function subHolding(object){
-        console.log("Sub Holding")
-        console.log(object);
-
-        const tableBody = document.querySelector("#holdingTable tbody");
-        const rows = tableBody.rows;
-
-        for(let i = 0; i < rows.length; i++){
-            let name = rows[i].cells[0].textContent;
-            if(name === object.name){
-                if(object.quantity == 0){
-                    tableBody.deleteRow(i);
-                    break;
-                }else{
-                    tableBody.rows[i].cells[1].textContent = object.quantity.toFixed(3);
-                    tableBody.rows[i].cells[2].textContent = object.price.toFixed(3);
-                    tableBody.rows[i].cells[3].textContent = object.value.toFixed(3);
-                    console.log(tableBody.rows[i]);
-                    break;
-                }
-            }
-        }
-    }
-
-    function subPending(object){
-        console.log("Sub Pending")
-        console.log(object);
-
-        const tableBody = document.querySelector("#pendingTable tbody");
-        const rows = tableBody.rows;
-
-        console.log(rows);
-
-        for(let i = 0; i < rows.length; i++){
-            let timestamp = rows[i].cells[0].textContent;
-
-            if(timestamp === object.timestamp){
-                tableBody.deleteRow(i);
-                break;
-            }
-
-        }
-    }
-
-    function addPending(object){
-        console.log(object);
-
-        const tableBody = document.querySelector("#pendingTable tbody");
-
-        const row = document.createElement("tr");
-
-        row.innerHTML = `
-        <td>${object.timestamp}</td>
-        <td>${object.name}</td>
-        <td>${object.action}</td>
-        <td>${object.quantity}</td>
-        <td>${object.price}</td>
-        <td>${object.value}</td>
-    `;
-
-        tableBody.appendChild(row);
-    }
-
-    function addTrade(object){
-
-        console.log(object);
-
-        const tableBody = document.querySelector("#historyTable tbody");
-
-        const row = document.createElement("tr");
-
-        row.innerHTML = `
-        <td>${object.timestamp}</td>
-        <td>${object.name}</td>
-        <td>${object.action}</td>
-        <td>${object.quantity}</td>
-        <td>${object.price}</td>
-        <td>${object.value}</td>
-    `;
-
-        tableBody.appendChild(row);
+    function loadTimer(){
+        queueInterval = setInterval(loadQueue, 3000);
+        commandInterval = setInterval(loadLog, 3000);
     }
 
     connect();
 </script>
 
-<div style = "
-    position: fixed;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 8px 14px;
 
-    display: none;
-    z-index: 1000;"
-     id="badge">Badge Number: 0</div>
+
+<!--<br><br>-->
+<!--<label for="employee">Select Employee:</label>-->
+<!--<select id="employee">-->
+<!--    <option value="1">1</option>-->
+<!--    <option value="2">2</option>-->
+<!--    <option value="3">3</option>-->
+<!--</select>-->
+<!--<br><br>-->
+<!--<button onclick="setEmployee()">Set Employee</button>-->
 
 <br><br>
-<label for="user">Select User:</label>
-<select id="user">
-    <option value="1">1</option>
-    <option value="2">2</option>
-    <option value="3">3</option>
+<label for="department">Select Department:</label>
+<select id="department">
+    <option value="lab">Lab</option>
+    <option value="medication">Medication</option>
+    <option value="imaging">Imaging</option>
 </select>
 <br><br>
-<button onclick="setUser()">Set User</button>
+<button onclick="setDepartment()">Set Department</button>
 
 <br><br><br><br>
 
-<h4>Cash Balance: <span id="cashBalance"></span></h4>
-<h4>Total Value: <span id="totalValue"></span></h4>
-<br>
-<h2> Holdings</h2>
-<table id="holdingTable">
+<h2> Order Queue</h2>
+<table id="queueTable">
     <thead>
     <tr>
-        <th>Ticker</th>
-        <th>Quantity</th>
-        <th>Price</th>
-        <th>Total</th>
-    </tr>
-    </thead>
-    <tbody></tbody>
-</table>
-
-<div id="Feed">
-
-    <div class="stock" id="AAPL">
-        <span class="name">AAPL</span>
-        <span class="price">--</span>
-    </div>
-
-    <div class="stock" id="TSLA">
-        <span class="name">TSLA</span>
-        <span class="price">--</span>
-    </div>
-
-    <div class="stock" id="GOOG">
-        <span class="name">GOOG</span>
-        <span class="price">--</span>
-    </div>
-
-    <div class="stock" id="AMZN">
-        <span class="name">AMZN</span>
-        <span class="price">--</span>
-    </div>
-
-    <div class="stock" id="MSFT">
-        <span class="name">MSFT</span>
-        <span class="price">--</span>
-    </div>
-
-</div>
-
-<h2>Market Pricing</h2>
-<label for="pricing">Select Price Strategy:</label>
-<select id="pricing">
-    <option value=randomWalk>Random Walk</option>
-    <option value= trendFollowing >Trend Following</option>
-    <option value=meanReversion>Mean Reversion</option>
-</select>
-<br>
-<button onclick="setPricing()">Set Market Pricing</button>
-
-<h2>Pending Orders</h2>
-<table id="pendingTable">
-    <thead>
-    <tr>
-        <th>Timestamp</th>
-        <th>Ticker</th>
         <th>Type</th>
-        <th>Quantity</th>
-        <th>Price</th>
-        <th>Total</th>
+        <th>Patient</th>
+        <th>Clinician</th>
+        <th>Priority</th>
+        <th>Status</th>
     </tr>
     </thead>
     <tbody></tbody>
@@ -449,190 +145,151 @@
 
 <br><br>
 
-<!--Buy Stock Input-->
-<label>Ticker:</label>
-<input id="buyName"/>
-<label>Quantity:</label>
-<input id="buyQuantity"/>
+<button onclick="claimOrder()">Claim Next Order</button>
+
+<br><br>
+
+<button onclick="completeOrder()">Complete Order</button>
+
+<br><br>
+
 <label>Type:</label>
-<input id="buyOrderType"/>
-<label>Price:</label>
-<input id="buyPrice"/>
+<input id="type"/>
+<label>Patient:</label>
+<input id="patient"/>
+<label>Clinician:</label>
+<input id="clinician"/>
+<label>Description:</label>
+<input id="description"/>
+<label>Priority:</label>
+<input id="priority"/>
 
-<button onclick="buyOrder()">Buy Order</button>
+<button onclick="submitOrder()">Submit Order</button>
 <br>
 
-<!--Sell Stock Input-->
-<label>Ticker:</label>
-<input id="sellName"/>
-<label>Quantity:</label>
-<input id="sellQuantity"/>
-<label>Type:</label>
-<input id="sellOrderType"/>
-<label>Price:</label>
-<input id="sellPrice"/>
-
-<button onclick="sellOrder()">Sell Order</button>
-<br>
-
-<h3>Select Notifications</h3>
-
-<label><input type="checkbox" id = "console" value="console" onchange="handleNotification(this)"> Console</label>
-<br>
-<label><input type="checkbox" id = "email" value="email" onchange="handleNotification(this)"> Email</label>
-<br>
-<label><input type="checkbox" id = "sms" value="sms" onchange="handleNotification(this)"> SMS</label>
-<br>
-<label><input type="checkbox" id = "dashboard" value="dashboard" onchange="handleNotification(this)"> Dashboard</label>
-<br>
-
-<h2> Transaction History</h2>
-<table id="historyTable">
+<h2> Audit Log</h2>
+<table id="logTable">
     <thead>
     <tr>
         <th>Timestamp</th>
-        <th>Ticker</th>
         <th>Type</th>
-        <th>Quantity</th>
-        <th>Price</th>
-        <th>Total</th>
+        <th>Order ID</th>
+        <th>Actor</th>
     </tr>
     </thead>
     <tbody></tbody>
 </table>
 
 <script>
-    //let host = "https://duck-service-jakecole.onrender.com";
 
-    async function setUser(){
-        let userId = parseInt(document.getElementById("user").value);
+    async function setDepartment(){
+        department = document.getElementById("department").value;
+        console.log("Department Changed");
+
+        // let request = {
+        //     method: "POST",
+        //     headers: {
+        //         "Content-Type": "application/json",
+        //     },
+        //     body: JSON.stringify(userId)
+        // };
+        //
+        // let response = await fetch(host + "/home/info", request);
+
+        // let message;
+        //
+        // if (response.ok) {
+        //     message = "User was successfully set";
+        // } else {
+        //     console.log(response);
+        //     message = "Error: User couldn't be set";
+        // }
+        //
+        // alert(message);
+        // await loadHistory();
+    }
+
+    async function claimOrder(){
+        let response = await fetch(host + "/home/order");
+        let data = await response.json();
+        console.log(data);
+        let orderId = data.orderID;
+        claimed.set(department, orderId);
+
+        let order = [orderId, department]
 
         let request = {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify(userId)
+            body: JSON.stringify(order)
         };
-
-        let response = await fetch(host + "/home/info", request);
-
-        let message;
-
-        if (response.ok) {
-            message = "User was successfully set";
-        } else {
-            console.log(response);
-            message = "Error: User couldn't be set";
-        }
-
-        alert(message);
-        await loadHistory();
-        await loadPending();
-        await loadHoldings();
-        await loadBalances();
-        await loadNotifications(userId.toString());
+        await fetch(host + "/home/claim", request);
     }
 
-    async function handleNotification(checkbox) {
+    async function completeOrder(){
+        let orderId = claimed.get(department);
 
-        let type = checkbox.value;
-        let endpoint = "";
-        if (checkbox.checked){
-            endpoint = "/home/info/notification/add";
-            if(type === "dashboard"){
-                let badge = document.getElementById("badge");
-
-                badge.style.display = "inline";
-            }
-        }else{
-            endpoint = "/home/info/notification/sub";
-
-            let badge = document.getElementById("badge");
-
-            badge.style.display = "none";
-            badge.innerText = "Badge Number: 0";
-        }
-
-
-        let request = {
-            method: "POST",
-            headers: {
-                "Content-Type": "text/plain"
-            },
-            body: type
-        };
-
-        try {
-            let response = await fetch(host + endpoint, request);
-
-            if (response.ok) {
-                console.log(type + (checkbox.checked ? " added" : " removed"));
-            } else {
-                console.log("Error:", response);
-            }
-
-        } catch (error) {
-            console.error("Request failed:", error);
-        }
-    }
-
-    async function setPricing() {
-
-        let pricing = document.getElementById("pricing").value;
+        let order = [orderId, department]
 
         let request = {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
-            body: pricing
+            body: JSON.stringify(order)
         };
-
-        let response = await fetch(host + "/home/price", request);
-
-        let message;
-
-        if (response.ok) {
-            message = "Price Model was successfully set";
-        } else {
-            message = "Error: Price Model couldn't be set";
+        let response = await fetch(host + "/home/complete", request);
+        if (response.ok){
+            claimed.set(department, null);
         }
-        alert(message);
     }
 
-    async function buyOrder() {
-        let message = "";
-        // Required
-        let name = document.getElementById("buyName").value;
-        if(name.trim() === ""){
-            console.log("Name is Required for order to be created")
-            return
-        }
+    async function cancel(orderId){
+        let order = [orderId, department]
 
-        let quantity = document.getElementById("buyQuantity").value;
-        if(quantity.trim() === ""){
-            console.log("Quantity is Required for order to be created")
-            return
-        }
-        let type = document.getElementById("buyOrderType").value;
+        let request = {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(order)
+        };
+        await fetch(host + "/home/cancel", request);
+    }
+
+    async function submitOrder() {
+
+        let type = document.getElementById("type").value;
         if(type.trim() === ""){
             console.log("Type is Required for order to be created")
             return
         }
-        let action = "buy"
 
-        // Optional
-        let price = document.getElementById("buyPrice").value;
-        if(price.trim() === ""){
-            if(type === "Limit"){
-                console.log("Price is required for Limit Order to be created")
-                return
-            }
-            price = "0"
+        let patient = document.getElementById("patient").value;
+        if(patient.trim() === ""){
+            console.log("Patient is Required for order to be created")
+            return
+        }
+        let clinician = document.getElementById("clinician").value;
+        if(clinician.trim() === ""){
+            console.log("Clinician is Required for order to be created")
+            return
+        }
+        let description = document.getElementById("description").value;
+        if(description.trim() === ""){
+            console.log("Description is Required for order to be created")
+            return
+        }
+        let priority = document.getElementById("priority").value;
+        if(priority.trim() === ""){
+            console.log("Priority is Required for order to be created")
+            return
         }
 
-        let order = [type, action, name, price, quantity];
+
+        let order = [type, patient, clinician, description, priority];
 
         console.log("You entered:" + JSON.stringify(order));
         // let token = localStorage.getItem("token");
@@ -645,73 +302,18 @@
             },
             body: JSON.stringify(order)
         };
-        let response = await fetch(host + "/home", request);
+        // let response =
+        await fetch(host + "/home", request);
 
-        if (response.ok) {
-
-            message = "Order was successfully created";
-
-        } else {
-            console.log(response);
-            message = "Error: Order couldn't be filled";
-        }
-        alert(message);
-    }
-</script>
-
-<script>
-    //let host = "https://duck-service-jakecole.onrender.com";
-
-    async function sellOrder() {
-        let message = "";
-        // Required
-        let name = document.getElementById("sellName").value;
-        if(name.trim() === ""){
-            console.log("Name is Required for order to be created")
-            return
-        }
-        let quantity = document.getElementById("sellQuantity").value;
-        if(quantity.trim() === ""){
-            console.log("Quantity is Required for order to be created")
-            return
-        }
-        let type = document.getElementById("sellOrderType").value;
-        if(type.trim() === ""){
-            console.log("Type is Required for order to be created")
-            return
-        }
-        let action = "sell";
-
-        // Optional
-        let price = document.getElementById("sellPrice").value;
-        if(price.trim() === ""){
-            price = "0"
-        }
-
-        let order = [type, action, name, price, quantity];
-
-        console.log("You entered:" + JSON.stringify(order));
-        // let token = localStorage.getItem("token");
-
-        let request = {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                // "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(order)
-        };
-        let response = await fetch(host + "/home", request);
-
-        if (response.ok) {
-
-            message = "Order was successfully created";
-
-        } else {
-            console.log(response);
-            message = "Error: Order couldn't be filled";
-        }
-        alert(message);
+        // if (response.ok) {
+        //
+        //     message = "Order was successfully created";
+        //
+        // } else {
+        //     console.log(response);
+        //     message = "Error: Order couldn't be filled";
+        // }
+        // alert(message);
     }
 </script>
 </body>

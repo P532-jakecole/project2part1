@@ -8,11 +8,11 @@
 		<version>3.5.11</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.project1</groupId>
-	<artifactId>project1</artifactId>
+	<groupId>com.project2</groupId>
+	<artifactId>project2</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>project1</name>
-	<description>Project1</description>
+	<name>project2</name>
+	<description>Project2</description>
 	<url/>
 	<licenses>
 		<license/>
