@@ -12,6 +12,7 @@ public interface Order extends OrderObservable {
     String getDescription();
     String getPriority();
     String getStatus();
+    void setPriority(String priority);
     void setStatus(String status);
     LocalDateTime getTimestamp();
 

@@ -3,11 +3,11 @@ package com.project2.Decorator;
 import com.project2.Factory.Order;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
-public class ConsoleNotification implements NotificationService{
+public class EmailNotification implements NotificationService{
     public final NotificationService notificationService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    public ConsoleNotification(NotificationService notificationService, SimpMessagingTemplate messagingTemplate) {
+    public EmailNotification(NotificationService notificationService, SimpMessagingTemplate messagingTemplate) {
         this.notificationService = notificationService;
         this.messagingTemplate = messagingTemplate;
     }
@@ -22,23 +22,22 @@ public class ConsoleNotification implements NotificationService{
         String message = null;
         switch (event.toLowerCase()) {
             case "pending":
-                message = String.format("Order %d Successfully Submitted by %s\n", order.getOrderID(), order.getClinicianName());
+                message = String.format("Mock Email: Dear %s, \nThe order with id %d was successfully submitted\n", order.getClinicianName(), order.getOrderID());
                 break;
             case "in_progress":
-                message = String.format("Order %d Successfully Claimed\n", order.getOrderID());
+                message = String.format("Mock Email: The order with an id of %d was successfully claimed.\n", order.getOrderID());
                 break;
             case "completed":
-                message = String.format("Order %d Successfully Completed\n", order.getOrderID());
+                message = String.format("Mock Email: The order with an id of %d was successfully completed.\n", order.getOrderID());
                 break;
             case "cancelled":
-                message = String.format("Order %d Successfully Cancelled\n", order.getOrderID());
+                message = String.format("Mock Email: The order with an id of %d was successfully cancelled.\n", order.getOrderID());
                 break;
             case "cancel error":
-                message = String.format("Error cancelling order %d. Status of order is %s\n", order.getOrderID(), order.getStatus());
+                message = String.format("Mock Email: Dear %s,\nThere was an error when trying to cancel order number %d. The current status of order is %s\n",order.getClinicianName(), order.getOrderID(), order.getStatus());
                 break;
         }
         if (message != null) {
-            System.out.println("Message Sent");
             messagingTemplate.convertAndSend("/order/logs",
                     message);
         }

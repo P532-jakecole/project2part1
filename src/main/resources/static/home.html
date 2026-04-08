@@ -38,12 +38,12 @@
 <script>
     let host = "";
     let department = "lab";
-    // let employee = "1";
+    let employeeId = "1";
+    let user = department + employeeId;
     let queue = new Map();
     let claimed = new Map();
-    claimed.set("lab", null);
-    claimed.set("medication", null);
-    claimed.set("imaging", null);
+    let userBadge = new Map();
+    let last = ["","",""];
 
     // Loads any existing History data
     async function loadQueue() {
@@ -68,9 +68,43 @@
 
             tableBody.appendChild(row);
 
-            queue.set(order.orderID, order);
+            queue.set(order.orderID.toString(), order);
         });
 
+        await loadClaimed();
+    }
+
+    async function loadNotifications() {
+        try {
+            let response = await fetch(host + "/home/notification");
+            let notifications = await response.json();
+
+            dashboardShown = notifications.includes("AlertNotification");
+            if (dashboardShown){
+                console.log(userBadge);
+                if(userBadge.get(user) == null || isNaN(userBadge.get(user))){
+                    userBadge.set(user, 0);
+                }
+                document.getElementById("badge").style.display = "inline";
+
+                document.getElementById("badge").innerText = "Badge Number: " + userBadge.get(user);
+            }else{
+                document.getElementById("badge").style.display = "none";
+            }
+
+            document.querySelectorAll("input[type=checkbox]").forEach(box => box.checked = false);
+
+            notifications.forEach(noti => {
+                let checkbox = document.getElementById(noti.toLowerCase());
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+
+
+        } catch (error) {
+            console.error("Error loading notifications:", error);
+        }
     }
 
     async function loadLog() {
@@ -83,11 +117,69 @@
 
         data.forEach(order => {
             const row = document.createElement("tr");
+            if(order.length === 4){
+                if(order[1] != "undo"){
+                        row.innerHTML = `
+                        <td>${order[0]}</td>
+                        <td>${order[1]}</td>
+                        <td>${order[2]}</td>
+                        <td>${order[3]}</td>
+                        <td>N/A</td>
+                        <td>N/A</td>
+                        <td><button onclick="replayCommand('${order[1]}', '${order[2]}')">Replay Command</button></td>
+                    `;
+                    }else{
+                        row.innerHTML = `
+                        <td>${order[0]}</td>
+                        <td>${order[1]}</td>
+                        <td>${order[2]}</td>
+                        <td>${order[3]}</td>
+                        <td>N/A</td>
+                        <td>N/A</td>
+                    `;
+                }
+            }else{
+                if(order[1] != "undo"){
+                    row.innerHTML = `
+                        <td>${order[0]}</td>
+                        <td>${order[1]}</td>
+                        <td>${order[2]}</td>
+                        <td>${order[3]}</td>
+                        <td>${order[4]}</td>
+                        <td>${order[5]}</td>
+                        <td><button onclick="replayCommand('${order[1]}', '${order[2]}')">Replay Command</button></td>
+                    `;
+                }else{
+                    row.innerHTML = `
+                        <td>${order[0]}</td>
+                        <td>${order[1]}</td>
+                        <td>${order[2]}</td>
+                        <td>${order[3]}</td>
+                        <td>${order[4]}</td>
+                        <td>${order[5]}</td>
+                    `;
+                }
+            }
+
+            tableBody.appendChild(row);
+        });
+
+    }
+
+    async function loadClaimed() {
+        const tableBody = document.querySelector("#claimedTable tbody");
+        tableBody.innerHTML = "";
+
+        let data = claimed.get(user);
+        if (data == null){
+            return;
+        }
+        data.forEach(order => {
+            const row = document.createElement("tr");
             row.innerHTML = `
             <td>${order[0]}</td>
             <td>${order[1]}</td>
-            <td>${order[2]}</td>
-            <td>${order[3]}</td>
+            <td><button onclick="completeOrder(${order[0]}, '${order[1]}')">Complete Order</button></td>
         `;
 
             tableBody.appendChild(row);
@@ -97,6 +189,7 @@
 
     loadQueue();
     loadLog();
+    loadNotifications();
 </script>
 
 <script>
@@ -118,6 +211,15 @@
             let text = message.body;
             console.log(text);
         });
+
+        stompClient.subscribe("/order/alert", function(message){
+            let text = message.body;
+
+            let badge = document.getElementById("badge");
+
+            badge.style.display = "inline";
+            badge.innerText = "Badge Number: " + text;
+        });
     }
 
     function loadTimer(){
@@ -127,6 +229,17 @@
 
     connect();
 </script>
+
+<div style = "
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 14px;
+
+    display: none;
+    z-index: 1000;"
+     id="badge">Badge Number: 0</div>
 
 <br><br>
 <label for="department">Select Department:</label>
@@ -138,7 +251,36 @@
 <br><br>
 <button onclick="setDepartment()">Set Department</button>
 
-<br><br><br><br>
+<br><br>
+<label for="employeeId">Select EmployeeId by Department:</label>
+<select id="employeeId">
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="3">3</option>
+</select>
+<br><br>
+<button onclick="setEmployeeId()">Set EmployeeId</button>
+
+<br><br>
+
+<div id="notification">
+    <label><input type="checkbox" value = "console" id="consolenotification">Console Notifications</label>
+    <label><input type="checkbox" value = "email" id="emailnotification">Email Notifications</label>
+    <label><input type="checkbox" value = "alert" id="alertnotification">Badge Counter</label>
+</div>
+<button onclick="setNotifications()">Update Notifications</button>
+
+<br><br>
+
+<h2>Department Strategy</h2>
+<label for="triage">Select Triage Strategy:</label>
+<select id="triage">
+    <option value=priorityFirst>Priority First</option>
+    <option value= loadBalancing >Load Balancing</option>
+    <option value=deadlineFirst>Deadline First</option>
+</select>
+<br>
+<button onclick="setTriage()">Set Triage Strategy</button>
 
 <h2 style="text-align: center;"> Order Queue</h2>
 <table id="queueTable">
@@ -160,7 +302,21 @@
 
 <br><br>
 
-<button onclick="completeOrder()">Complete Order</button>
+<button onclick="undo()">Undo last action</button>
+
+<br><br>
+
+<h2 style="text-align: center;"> Claimed Orders</h2>
+<table id="claimedTable">
+    <thead>
+    <tr>
+        <th>Order ID</th>
+        <th>Priority</th>
+        <th>Complete</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
 
 <br><br>
 
@@ -194,6 +350,8 @@
         <th>Type</th>
         <th>Order ID</th>
         <th>Actor</th>
+        <th>Escalation</th>
+        <th>Affected Orders</th>
     </tr>
     </thead>
     <tbody></tbody>
@@ -201,16 +359,159 @@
 
 <script>
 
+    async function undo(){
+        let request = {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: user
+        };
+
+        let response = await fetch(host + "/home/undo", request);
+        if (response.ok) {
+            switch (last[0]){
+                case "claim":
+                    const arr = claimed.get(user);
+                    const index = arr.findIndex(order =>
+                        order[0] === last[1] &&
+                        order[1] === last[2]
+                    );
+                    if (index !== -1) {
+                        arr.splice(index, 1);
+                    }
+                    userBadge.set(user, userBadge.get(user) + 1);
+                    last = ["cancel", last[1], last[2]];
+                    break;
+                case "complete":
+                    if (claimed.get(user) == null) {
+                        claimed.set(user, new Array([parseInt(last[1].toString()), last[2]]));
+                    } else {
+                        claimed.get(user).push([parseInt(last[1].toString()), last[2]]);
+                    }
+                    last = ["claim", last[1], last[2]];
+                    break;
+            }
+
+        }
+    }
+
+    async function replayCommand(type, orderId){
+        let command = [orderId, type, user];
+        let request = {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(command)
+        };
+
+        let response = await fetch(host + "/home/replay", request);
+        if (response.ok) {
+            let data = queue.get(orderId);
+            let priority = data.priority;
+            last = [type, orderId ,priority];
+            if(type === "claim") {
+                console.log(orderId);
+                console.log(queue);
+                console.log(data);
+                if (claimed.get(user) == null) {
+                    claimed.set(user, new Array([parseInt(orderId.toString()), priority]));
+                } else {
+                    claimed.get(user).push([parseInt(orderId.toString()), priority]);
+                }
+            }else if(type === "complete"){
+                const arr = claimed.get(user);
+                const index = arr.findIndex(order =>
+                    order[0] === orderId &&
+                    order[1] === priority
+                );
+                if (index !== -1) {
+                    arr.splice(index, 1);
+                }
+                userBadge.set(user, userBadge.get(user) + 1);
+            }
+
+            console.log(claimed);
+        }
+    }
+
+    async function setTriage() {
+
+        let triage = document.getElementById("triage").value;
+
+        let request = {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: triage
+        };
+
+        let response = await fetch(host + "/home/triage", request);
+
+        let message;
+
+        if (response.ok) {
+            message = "Triage Strategy changed";
+            alert(message);
+        }
+    }
+
+    async function setNotifications(){
+        const checkedValues = [...document.querySelectorAll('input[type="checkbox"]:checked')]
+            .map(cb => cb.value);
+
+        const notifications = [user, ...checkedValues];
+
+        let request = {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(notifications)
+        };
+        await fetch(host + "/home/notification", request);
+        await loadNotifications();
+    }
+
     async function setDepartment(){
         department = document.getElementById("department").value;
         console.log("Department Changed");
+        user = department + employeeId;
+
+        let order = [department, employeeId];
+
+        let request = {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(order)
+        };
+        await fetch(host + "/home/update/user", request);
+        await loadNotifications();
+    }
+
+    async function setEmployeeId(){
+        employeeId = document.getElementById("employeeId").value;
+        console.log("Employee Id Changed");
+        user = department + employeeId;
+
+        let order = [department, employeeId];
+
+        let request = {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(order)
+        };
+        await fetch(host + "/home/update/user", request);
+        await loadNotifications();
     }
 
     async function claimOrder(){
-        if(claimed.get(department) != null){
-            console.log("Already claimed an order");
-            return;
-        }
         let response = await fetch(host + "/home/order");
         let data;
         try{
@@ -220,9 +521,14 @@
         }
 
         let orderId = data.orderID;
-        claimed.set(department, orderId);
+        let priority = data.priority;
+        if (claimed.get(user) == null){
+            claimed.set(user, new Array([orderId, priority]));
+        }else{
+            claimed.get(user).push([orderId, priority]);
+        }
 
-        let order = [orderId, department]
+        let order = [orderId, user]
 
         let request = {
             method: "POST",
@@ -232,16 +538,25 @@
             body: JSON.stringify(order)
         };
         await fetch(host + "/home/claim", request);
+        last = ["claim", orderId, priority];
+        userBadge.set(user, userBadge.get(user) + 1);
     }
 
-    async function completeOrder(){
-        let orderId = claimed.get(department);
-        if(orderId == null){
-            console.log("No Order Claimed");
-            return;
-        }
+    async function completeOrder(orderId, priority){
+        // let orderArray = claimed.get(user);
+        // if(orderArray == null){
+        //     console.log("No Order Claimed");
+        //     return;
+        // }
+        //
+        // let orderId = orderArray.get(user);
+        // if(orderId == null){
+        //     console.log("No Order Claimed");
+        //     return;
+        // }
+        console.log(claimed);
 
-        let order = [orderId, department]
+        let order = [orderId, user];
 
         let request = {
             method: "POST",
@@ -252,12 +567,21 @@
         };
         let response = await fetch(host + "/home/complete", request);
         if (response.ok){
-            claimed.set(department, null);
+            const arr = claimed.get(user);
+            const index = arr.findIndex(order =>
+                order[0] === orderId &&
+                order[1] === priority
+            );
+            if (index !== -1) {
+                arr.splice(index, 1);
+            }
+            userBadge.set(user, userBadge.get(user) + 1);
+            last = ["complete", orderId, priority];
         }
     }
 
     async function cancel(orderId){
-        let order = [orderId, department]
+        let order = [orderId, user]
 
         let request = {
             method: "POST",
@@ -267,6 +591,8 @@
             body: JSON.stringify(order)
         };
         await fetch(host + "/home/cancel", request);
+        last = ["cancel", orderId, ""];
+        userBadge.set(user, userBadge.get(user) + 1);
     }
 
     async function submitOrder() {
@@ -305,12 +631,12 @@
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                // "Authorization": `Bearer ${token}`
             },
             body: JSON.stringify(order)
         };
-        // let response =
         await fetch(host + "/home", request);
+        last = ["submit", "", ""];
+        userBadge.set(user, userBadge.get(user) + 1);
     }
 </script>
 </body>

@@ -34,7 +34,7 @@ public class ImagingOrder implements Order {
 
     @Override
     public String getType() {
-        return "Lab";
+        return "Imaging";
     }
 
     @Override
@@ -66,6 +66,11 @@ public class ImagingOrder implements Order {
     public void setStatus(String status) {
         this.orderStatus = status;
         notifyObserver(status);
+    }
+
+    @Override
+    public void setPriority(String priority) {
+        this.priority = priority;
     }
 
     @Override

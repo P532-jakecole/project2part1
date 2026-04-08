@@ -48,17 +48,17 @@ class CommandTest {
     @Test
     void submitCommandTest() {
         // Arrange
-        Order order = new LabOrder(1, "Jake", "Doctor", "Test", "STAT");
+        Order order = new LabOrder(1, "Jake", "Doctor", "Test", "URGENT");
         Command submitCommand = new LabOrderSubmitCommand(order, triagingEngine, orderAccess, notificationService, commandLog);
         String actor = "Doctor";
-        when(triagingEngine.getPosition(order.getPriority(), order.getTimestamp())).thenReturn(0);
+        when(triagingEngine.getPosition(order.getPriority(), order.getTimestamp(), order.getType())).thenReturn(0);
 
         // Act
         submitCommand.execute(actor);
 
         // Assert
         verify(commandLog).addLog(order, actor, "submit");
-        verify(triagingEngine).getPosition(order.getPriority(), order.getTimestamp());
+        verify(triagingEngine).getPosition(order.getPriority(), order.getTimestamp(), order.getType());
         verify(orderAccess).saveOrder(0, order);
         assertEquals(order.getStatus(), "PENDING");
 
@@ -84,7 +84,7 @@ class CommandTest {
     void completeCommandTest() {
         // Arrange
         Order order = new LabOrder(1, "Jake", "Doctor", "Test", "STAT");
-        Command completeCommand = new LabOrderCompleteCommand(order, notificationService, commandLog);
+        Command completeCommand = new LabOrderCompleteCommand(order, notificationService, commandLog, orderAccess, triagingEngine);
         String actor = "Lab";
 
         // Act
@@ -100,7 +100,7 @@ class CommandTest {
     void cancelCommandTest() {
         // Arrange
         Order order = new ImagingOrder(1, "Jake", "Doctor", "Test", "STAT");
-        Command cancelCommand = new ImagingOrderCancelCommand(order, orderAccess, notificationService, commandLog);
+        Command cancelCommand = new ImagingOrderCancelCommand(order, orderAccess, notificationService, commandLog, triagingEngine);
         String actor = "Doctor";
 
         // Act
@@ -116,7 +116,7 @@ class CommandTest {
     void cancelCommandFailTest() {
         // Arrange
         Order order = new MedicationOrder(1, "Jake", "Doctor", "Test", "STAT");
-        Command cancelCommand = new MedicationOrderCancelCommand(order, orderAccess, notificationService, commandLog);
+        Command cancelCommand = new MedicationOrderCancelCommand(order, orderAccess, notificationService, commandLog, triagingEngine);
         String actor = "Doctor";
         order.setStatus("IN_PROGRESS");
 
@@ -127,5 +127,30 @@ class CommandTest {
         verify(commandLog, never()).addLog(order, actor, "cancel");
         verify(orderAccess, never()).removeOrder(order);
         assertEquals(order.getStatus(), "IN_PROGRESS");
+    }
+
+    @Test
+    void undoCommandTest() {
+        // Arrange
+        Order order = new ImagingOrder(1, "Jake", "Doctor", "Test", "URGENT");
+        Command cancelCommand = new ImagingOrderCancelCommand(order, orderAccess, notificationService, commandLog, triagingEngine);
+        String actor = "Doctor";
+
+        // Act
+        cancelCommand.execute(actor);
+
+        // Assert
+        verify(commandLog).addLog(order, actor, "cancel");
+        verify(orderAccess).removeOrder(order);
+        assertEquals(order.getStatus(), "CANCELLED");
+
+        // Act
+        cancelCommand.undo(actor);
+
+        // Assert
+        verify(commandLog).addLog(order, actor, "undo");
+        verify(triagingEngine).getPosition(order.getPriority(), order.getTimestamp(), order.getType());
+        verify(orderAccess).saveOrder(0, order);
+        assertEquals(order.getStatus(), "PENDING");
     }
 }

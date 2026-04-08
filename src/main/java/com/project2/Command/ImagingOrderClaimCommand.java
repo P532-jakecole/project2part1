@@ -23,4 +23,14 @@ public class ImagingOrderClaimCommand implements Command {
             order.setStatus("IN_PROGRESS");
         }
     }
+
+    @Override
+    public void undo(String actor) {
+        String commandType = "undo";
+        OrderProcess orderProcess = new OrderLogging(new BaseOrderHandler(), notificationService, commandLog, actor, commandType);
+        String errorMessage = orderProcess.process(order);
+        if(errorMessage == null) {
+            order.setStatus("PENDING");
+        }
+    }
 }

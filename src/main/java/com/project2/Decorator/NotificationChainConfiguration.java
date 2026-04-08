@@ -8,12 +8,11 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 public class NotificationChainConfiguration {
 
     @Bean
-    //@Primary
     public NotificationChain notificationChain(SimpMessagingTemplate simpMessagingTemplate) {
         NotificationService base = new BaseNotification();
         NotificationService chain = new ConsoleNotification(base, simpMessagingTemplate);
 
-        NotificationChain notifications = new NotificationChain();
+        NotificationChain notifications = new NotificationChain(simpMessagingTemplate);
         notifications.setActiveNotifications(chain);
         return notifications;
     }

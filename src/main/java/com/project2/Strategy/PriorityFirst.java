@@ -5,6 +5,7 @@ import com.project2.OrderAccess;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 
 public class PriorityFirst implements TriageStrategy{
     private final OrderAccess orderAccess;
@@ -27,7 +28,7 @@ public class PriorityFirst implements TriageStrategy{
     }
 
     @Override
-    public int getPosition(String priority, LocalDateTime timestamp) {
+    public int getPosition(String priority, LocalDateTime timestamp, String type) {
         ArrayList<Order> pending = orderAccess.listPendingOrders();
         int count = 0;
         int orderPriority = priorityValue(priority);
@@ -43,5 +44,16 @@ public class PriorityFirst implements TriageStrategy{
             }
         }
         return count;
+    }
+
+    @Override
+    public void reorder() {
+        ArrayList<Order> pending = orderAccess.listPendingOrders();
+        pending.sort(Comparator
+                .comparingInt((Order order) -> priorityValue(order.getPriority())).reversed()
+                .thenComparing(order -> order.getTimestamp())
+        );
+
+        orderAccess.setPendingOrders(pending);
     }
 }

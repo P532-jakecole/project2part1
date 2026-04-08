@@ -3,6 +3,8 @@ package com.project2.Decorator;
 import com.project2.Command.CommandLog;
 import com.project2.Factory.Order;
 
+import java.util.Objects;
+
 public class OrderLogging extends OrderHandler{
     private NotificationService notificationService;
     private CommandLog commandLog;
@@ -19,9 +21,19 @@ public class OrderLogging extends OrderHandler{
 
     @Override
     public String process(Order order) {
-        //notificationService.notify(order, commandType);
-        commandLog.addLog(order, actor, commandType);
-        super.process(order);
+        String escalationInfo = super.process(order);
+        if(Objects.equals(order.getPriority(), "STAT")){
+            if(escalationInfo != null){
+                String[] info = escalationInfo.split(",");
+                String priorStatus = info[0];
+                String amountEffected = info[1];
+                commandLog.addLog(order, actor, commandType, priorStatus, amountEffected);
+            }else{
+                commandLog.addLog(order, actor, commandType);
+            }
+        }else{
+            commandLog.addLog(order, actor, commandType);
+        }
         return null;
     }
 }

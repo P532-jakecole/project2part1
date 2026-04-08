@@ -32,8 +32,8 @@ public class OrderFactory {
 
                 commands.add(new LabOrderSubmitCommand(lo, triagingEngine, orderAccess, notificationService, commandLog));
                 commands.add(new LabOrderClaimCommand(lo, notificationService, commandLog));
-                commands.add(new LabOrderCompleteCommand(lo, notificationService, commandLog));
-                commands.add(new LabOrderCancelCommand(lo, orderAccess, notificationService, commandLog));
+                commands.add(new LabOrderCompleteCommand(lo, notificationService, commandLog, orderAccess, triagingEngine));
+                commands.add(new LabOrderCancelCommand(lo, orderAccess, notificationService, commandLog, triagingEngine));
                 commandLog.addCommands(orderId, commands);
 
                 orderAccess.incrimentOrderId();
@@ -44,8 +44,8 @@ public class OrderFactory {
 
                 commands.add(new MedicationOrderSubmitCommand(mo, triagingEngine, orderAccess, notificationService, commandLog));
                 commands.add(new MedicationOrderClaimCommand(mo, notificationService, commandLog));
-                commands.add(new MedicationOrderCompleteCommand(mo, notificationService, commandLog));
-                commands.add(new MedicationOrderCancelCommand(mo, orderAccess, notificationService, commandLog));
+                commands.add(new MedicationOrderCompleteCommand(mo, notificationService, commandLog, orderAccess, triagingEngine));
+                commands.add(new MedicationOrderCancelCommand(mo, orderAccess, notificationService, commandLog, triagingEngine));
                 commandLog.addCommands(orderId, commands);
 
                 orderAccess.incrimentOrderId();
@@ -55,8 +55,8 @@ public class OrderFactory {
 
                 commands.add(new ImagingOrderSubmitCommand(io, triagingEngine, orderAccess, notificationService, commandLog));
                 commands.add(new ImagingOrderClaimCommand(io, notificationService, commandLog));
-                commands.add(new ImagingOrderCompleteCommand(io, notificationService, commandLog));
-                commands.add(new ImagingOrderCancelCommand(io, orderAccess, notificationService, commandLog));
+                commands.add(new ImagingOrderCompleteCommand(io, notificationService, commandLog, orderAccess, triagingEngine));
+                commands.add(new ImagingOrderCancelCommand(io, orderAccess, notificationService, commandLog, triagingEngine));
                 commandLog.addCommands(orderId, commands);
 
                 orderAccess.incrimentOrderId();

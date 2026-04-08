@@ -69,6 +69,11 @@ public class LabOrder implements Order {
     }
 
     @Override
+    public void setPriority(String priority) {
+        this.priority = priority;
+    }
+
+    @Override
     public LocalDateTime getTimestamp() {
         return orderDate;
     }

@@ -15,7 +15,7 @@ import java.util.List;
 @RequestMapping("/home")
 public class OrderController {
 
-    private OrderManager orderManager;
+    private final OrderManager orderManager;
 
     public OrderController(OrderManager orderManager) {
         this.orderManager = orderManager;
@@ -39,10 +39,18 @@ public class OrderController {
         }
     }
 
+    @PostMapping("/undo")
+    public void undoCommand(@RequestBody String user) {
+        try{
+            orderManager.undoCommand(user);
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
+    }
+
     @PostMapping("/claim")
     public void claimOrder(@RequestBody String[] claim) {
         try{
-            System.out.println(claim);
             orderManager.claimOrder(Integer.parseInt(claim[0]), claim[1]);
         }catch (Exception e){
             throw new RuntimeException(e);
@@ -62,6 +70,42 @@ public class OrderController {
     public void update(@RequestBody String triage) {
         try{
             orderManager.updateTriage(triage);
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    @PostMapping("/notification")
+    public void updateNotifications(@RequestBody String[] notifications) {
+        try{
+            orderManager.setNotifications(notifications);
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    @GetMapping("/notification")
+    public ArrayList<String> getNotifications() {
+        try{
+            return orderManager.getNotifications();
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    @PostMapping("/update/user")
+    public void updateUser(@RequestBody String[] userInfo) {
+        try{
+            orderManager.updateUser(userInfo);
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    @PostMapping("/replay")
+    public void replayCommand(@RequestBody String[] command) {
+        try{
+            orderManager.replayCommand(command);
         }catch (Exception e){
             throw new RuntimeException(e);
         }
