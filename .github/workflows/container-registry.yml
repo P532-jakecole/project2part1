@@ -43,7 +43,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/part2'
     steps:
       - run: |
           curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}

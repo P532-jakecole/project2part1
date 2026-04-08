@@ -38,6 +38,8 @@ public class ImagingOrderCompleteCommand implements Command {
         String errorMessage = orderProcess.process(order);
         if(errorMessage == null) {
             order.setStatus("IN_PROGRESS");
+            int position = triagingEngine.getPosition(order.getPriority(), order.getTimestamp(), order.getType());
+            orderAccess.saveOrder(position, order);
         }
     }
 }
