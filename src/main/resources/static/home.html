@@ -81,7 +81,7 @@
 
             dashboardShown = notifications.includes("AlertNotification");
             if (dashboardShown){
-                console.log(userBadge);
+
                 if(userBadge.get(user) == null || isNaN(userBadge.get(user))){
                     userBadge.set(user, 0);
                 }
@@ -126,7 +126,7 @@
                         <td>${order[3]}</td>
                         <td>N/A</td>
                         <td>N/A</td>
-                        <td><button onclick="replayCommand('${order[1]}', '${order[2]}')">Replay Command</button></td>
+                        <td><button onclick="replayCommand('${order[1]}', '${order[2]}', '${order[3]}')">Replay Command</button></td>
                     `;
                     }else{
                         row.innerHTML = `
@@ -147,7 +147,7 @@
                         <td>${order[3]}</td>
                         <td>${order[4]}</td>
                         <td>${order[5]}</td>
-                        <td><button onclick="replayCommand('${order[1]}', '${order[2]}')">Replay Command</button></td>
+                        <td><button onclick="replayCommand('${order[1]}', '${order[2]}', '${order[3]}')">Replay Command</button></td>
                     `;
                 }else{
                     row.innerHTML = `
@@ -196,7 +196,7 @@
     let stompClient = null;
 
     function connect() {
-        const socket = new SockJS('/ws');
+        const socket = new SockJS(host + '/ws');
         stompClient = Stomp.over(socket);
 
         stompClient.connect({}, function(frame) {
@@ -396,8 +396,8 @@
         }
     }
 
-    async function replayCommand(type, orderId){
-        let command = [orderId, type, user];
+    async function replayCommand(type, orderId, actor){
+        let command = [orderId, type, actor];
         let request = {
             method: "POST",
             headers: {
@@ -410,29 +410,26 @@
         if (response.ok) {
             let data = queue.get(orderId);
             let priority = data.priority;
-            last = [type, orderId ,priority, user];
+
             if(type === "claim") {
-                console.log(orderId);
-                console.log(queue);
-                console.log(data);
-                if (claimed.get(user) == null) {
-                    claimed.set(user, new Array([parseInt(orderId.toString()), priority]));
+                if (claimed.get(actor) == null) {
+                    claimed.set(actor, new Array([parseInt(orderId.toString()), priority]));
                 } else {
-                    claimed.get(user).push([parseInt(orderId.toString()), priority]);
+                    claimed.get(actor).push([parseInt(orderId.toString()), priority]);
                 }
             }else if(type === "complete"){
-                const arr = claimed.get(user);
+                const arr = claimed.get(actor);
                 const index = arr.findIndex(order =>
-                    order[0] === orderId &&
+                    order[0] === parseInt(orderId.toString()) &&
                     order[1] === priority
                 );
                 if (index !== -1) {
                     arr.splice(index, 1);
                 }
-                userBadge.set(user, userBadge.get(user) + 1);
+                userBadge.set(actor, userBadge.get(actor) + 1);
             }
+            last = [type, orderId,priority, actor];
 
-            console.log(claimed);
         }
     }
 
@@ -523,9 +520,9 @@
         let orderId = data.orderID;
         let priority = data.priority;
         if (claimed.get(user) == null){
-            claimed.set(user, new Array([orderId, priority]));
+            claimed.set(user, new Array([parseInt(orderId.toString()), priority]));
         }else{
-            claimed.get(user).push([orderId, priority]);
+            claimed.get(user).push([parseInt(orderId.toString()), priority]);
         }
 
         let order = [orderId, user]
@@ -543,18 +540,6 @@
     }
 
     async function completeOrder(orderId, priority){
-        // let orderArray = claimed.get(user);
-        // if(orderArray == null){
-        //     console.log("No Order Claimed");
-        //     return;
-        // }
-        //
-        // let orderId = orderArray.get(user);
-        // if(orderId == null){
-        //     console.log("No Order Claimed");
-        //     return;
-        // }
-        console.log(claimed);
 
         let order = [orderId, user];
 
@@ -569,7 +554,7 @@
         if (response.ok){
             const arr = claimed.get(user);
             const index = arr.findIndex(order =>
-                order[0] === orderId &&
+                order[0] === parseInt(orderId.toString()) &&
                 order[1] === priority
             );
             if (index !== -1) {
