@@ -43,7 +43,7 @@
     let queue = new Map();
     let claimed = new Map();
     let userBadge = new Map();
-    let last = ["","",""];
+    let last = ["","","",""];
 
     // Loads any existing History data
     async function loadQueue() {
@@ -372,7 +372,7 @@
         if (response.ok) {
             switch (last[0]){
                 case "claim":
-                    const arr = claimed.get(user);
+                    const arr = claimed.get(last[3]);
                     const index = arr.findIndex(order =>
                         order[0] === last[1] &&
                         order[1] === last[2]
@@ -380,16 +380,16 @@
                     if (index !== -1) {
                         arr.splice(index, 1);
                     }
-                    userBadge.set(user, userBadge.get(user) + 1);
-                    last = ["cancel", last[1], last[2]];
+                    userBadge.set(last[3], userBadge.get(last[3]) + 1);
+                    last = ["cancel", last[1], last[2], user];
                     break;
                 case "complete":
-                    if (claimed.get(user) == null) {
-                        claimed.set(user, new Array([parseInt(last[1].toString()), last[2]]));
+                    if (claimed.get(last[3]) == null) {
+                        claimed.set(last[3], new Array([parseInt(last[1].toString()), last[2]]));
                     } else {
-                        claimed.get(user).push([parseInt(last[1].toString()), last[2]]);
+                        claimed.get(last[3]).push([parseInt(last[1].toString()), last[2]]);
                     }
-                    last = ["claim", last[1], last[2]];
+                    last = ["claim", last[1], last[2], user];
                     break;
             }
 
@@ -410,7 +410,7 @@
         if (response.ok) {
             let data = queue.get(orderId);
             let priority = data.priority;
-            last = [type, orderId ,priority];
+            last = [type, orderId ,priority, user];
             if(type === "claim") {
                 console.log(orderId);
                 console.log(queue);
@@ -538,7 +538,7 @@
             body: JSON.stringify(order)
         };
         await fetch(host + "/home/claim", request);
-        last = ["claim", orderId, priority];
+        last = ["claim", orderId, priority, user];
         userBadge.set(user, userBadge.get(user) + 1);
     }
 
@@ -576,7 +576,7 @@
                 arr.splice(index, 1);
             }
             userBadge.set(user, userBadge.get(user) + 1);
-            last = ["complete", orderId, priority];
+            last = ["complete", orderId, priority, user];
         }
     }
 
@@ -591,7 +591,7 @@
             body: JSON.stringify(order)
         };
         await fetch(host + "/home/cancel", request);
-        last = ["cancel", orderId, ""];
+        last = ["cancel", orderId, "", user];
         userBadge.set(user, userBadge.get(user) + 1);
     }
 
